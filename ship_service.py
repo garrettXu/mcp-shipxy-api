@@ -289,16 +289,16 @@ class ShipApproachData(BaseModel):
     approach_data: list[ApproachDataItem]
 
 class SearchShipApproachResponse(BaseModel):
-    code: int
-    message: str
-    data: list[ShipApproachData]
+    status: int
+    msg: str
+    data: ShipApproachData
 
 class PortOfCallData(BaseModel):
     ship_name: str
     call_sign: str
     imo: int
     mmsi: int
-    ship_type: str
+    ship_type: int
     port_cnname: str
     port_name: str
     port_time_zone: str
@@ -509,7 +509,7 @@ class WeatherData(BaseModel):
     meteorological: str
     winddirection: str
     windpower: str
-    waveheight: str
+    waveheight: str = None
     visibility: float
 
 class GetWeatherResponse(BaseModel):
@@ -567,7 +567,7 @@ class TideStationInfo(BaseModel):
     lng: float
     port_time_zone: str
     datumn: str
-    tidetype: str
+    tide_type: str
 
 class GetTidesResponse(BaseModel):
     status: int
@@ -1079,7 +1079,7 @@ class ShipxyAPI:
         if response.status_code != 200:
             raise Exception(f"HTTP请求失败: {response.status_code}")
         resp_json = response.json()
-        if resp_json.get("code") != 0:
+        if resp_json.get("status") != 0:
             raise Exception(f"船讯网返回错误: {resp_json.get('message', '未知错误')}")
         return SearchShipApproachResponse(**resp_json)
 
