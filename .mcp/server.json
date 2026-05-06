@@ -1,0 +1,41 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.garrettxu/mcp-shipxy-api",
+  "title": "Shipxy API",
+  "description": "Shipxy maritime data tools for vessels, ports, routes, weather, and tides.",
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/garrettXu/mcp-shipxy-api",
+  "repository": {
+    "url": "https://github.com/garrettXu/mcp-shipxy-api",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mcp-shipxy-api",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        },
+        {
+          "type": "positional",
+          "value": "start"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "SHIPXY_API_KEY",
+          "description": "Shipxy server-side API key from the Shipxy Open Platform.",
+          "isRequired": true,
+          "isSecret": true,
+          "placeholder": "your_shipxy_api_key"
+        }
+      ]
+    }
+  ]
+}

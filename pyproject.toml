@@ -1,9 +1,23 @@
 [project]
 name = "mcp-shipxy-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Shipxy MCP server and CLI for maritime vessel, port, route, weather, and tide APIs."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    { name = "garrettXu" },
+]
+keywords = ["shipxy", "mcp", "maritime", "vessel", "shipping", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Scientific/Engineering :: GIS",
+]
 dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.11.0",
@@ -13,6 +27,12 @@ dependencies = [
 
 [project.scripts]
 shipxy = "cli:main"
+mcp-shipxy-api = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/garrettXu/mcp-shipxy-api"
+Repository = "https://github.com/garrettXu/mcp-shipxy-api"
+Issues = "https://github.com/garrettXu/mcp-shipxy-api/issues"
 
 [build-system]
 requires = ["setuptools>=68"]

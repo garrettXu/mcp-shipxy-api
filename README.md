@@ -1,5 +1,7 @@
 # shipxy-api-mcp
 
+<!-- mcp-name: io.github.garrettxu/mcp-shipxy-api -->
+
 **Shipxy MCP Server** is a fully MCP-compliant, open-source Location-Based Service (LBS) solution for maritime scenarios, providing a comprehensive suite of ship and port APIs and tools for developers and AI agents. It enables seamless integration of real-time vessel data, route planning, weather, tides, and more into your applications.
 
 ## 🚀 Introduction
@@ -29,6 +31,20 @@ Register and create a server-side API Key at [Shipxy Open Platform](https://api.
 **Note:** The API key is required for all requests.
 
 ### 2. Installation
+
+Install from PyPI after release:
+
+```bash
+pipx install mcp-shipxy-api
+```
+
+Or install into an existing virtual environment:
+
+```bash
+pip install mcp-shipxy-api
+```
+
+For local source development:
 
 ```bash
 pip install -r requirements.txt
@@ -99,6 +115,22 @@ You can also start the MCP server through the CLI:
 ```bash
 shipxy mcp start
 shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+```
+
+Agent and MCP clients should configure the API key through the `SHIPXY_API_KEY` environment variable:
+
+```json
+{
+  "mcpServers": {
+    "shipxy": {
+      "command": "shipxy",
+      "args": ["mcp", "start"],
+      "env": {
+        "SHIPXY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
 ```
 
 ## 🧩 Supported APIs

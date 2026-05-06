@@ -1,5 +1,7 @@
 # shipxy-api-mcp
 
+<!-- mcp-name: io.github.garrettxu/mcp-shipxy-api -->
+
 **Shipxy MCP Server** 是一个完全兼容 MCP 协议的开源海事场景位置服务（LBS）解决方案，为开发者和 AI 智能体提供全面的船舶与港口 API 及工具。它可无缝集成实时船舶数据、航线规划、气象、潮汐等多种能力到您的应用中。
 
 ## 🚀 项目简介
@@ -29,6 +31,20 @@
 **注意：** 所有请求均需 API Key。
 
 ### 2. 安装依赖
+
+正式发布到 PyPI 后可直接安装：
+
+```bash
+pipx install mcp-shipxy-api
+```
+
+或安装到已有虚拟环境：
+
+```bash
+pip install mcp-shipxy-api
+```
+
+本地源码开发：
 
 ```bash
 pip install -r requirements.txt
@@ -98,6 +114,22 @@ shipxy search-ship COSCO --max 5 --format ndjson
 ```bash
 shipxy mcp start
 shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+```
+
+Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
+
+```json
+{
+  "mcpServers": {
+    "shipxy": {
+      "command": "shipxy",
+      "args": ["mcp", "start"],
+      "env": {
+        "SHIPXY_API_KEY": "你的_api_key"
+      }
+    }
+  }
+}
 ```
 
 ## 🧩 支持的API
