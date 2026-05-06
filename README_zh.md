@@ -60,6 +60,46 @@ SHIPXY_API_KEY=你的_api_key
 }
 ```
 
+## CLI 使用
+
+本项目也提供跨平台 CLI，命令保持扁平结构，直接对应 MCP tool 名称，仅把下划线改成短横线：
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+shipxy auth status
+shipxy tools
+shipxy schema search-ship
+shipxy search-ship COSCO --max 5
+shipxy get-single-ship 413211000
+shipxy search-port Shanghai
+shipxy plan-route-by-port CNSHA SGSIN
+shipxy get-weather-by-point --lng 123.58414 --lat 27.37979
+```
+
+Windows PowerShell 激活虚拟环境：
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+CLI 默认输出 JSON，方便大模型和其他 Agent 调用。需要人类可读输出时可指定：
+
+```bash
+shipxy search-ship COSCO --max 5 --format table
+shipxy search-ship COSCO --max 5 --format pretty
+shipxy search-ship COSCO --max 5 --format ndjson
+```
+
+也可以通过 CLI 启动 MCP Server：
+
+```bash
+shipxy mcp start
+shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+```
+
 ## 🧩 支持的API
 
 | 工具名称                  | 说明                                   |
@@ -117,4 +157,4 @@ MIT © shipxy-api-mcp 贡献者
 
 如需了解更多或商务合作，请联系：
 
-**电话：** 400-010-8558 / 010-8286 8599 
+**电话：** 400-010-8558 / 010-8286 8599

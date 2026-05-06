@@ -61,6 +61,46 @@ Recommended: Use an `mcp.json` configuration file for easy integration with MCP 
 }
 ```
 
+## CLI Usage
+
+This project also provides a cross-platform CLI. Business commands stay flat and map directly to MCP tool names, with underscores converted to dashes:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+shipxy auth status
+shipxy tools
+shipxy schema search-ship
+shipxy search-ship COSCO --max 5
+shipxy get-single-ship 413211000
+shipxy search-port Shanghai
+shipxy plan-route-by-port CNSHA SGSIN
+shipxy get-weather-by-point --lng 123.58414 --lat 27.37979
+```
+
+Windows PowerShell activation:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+The CLI defaults to JSON output for LLM and agent calls. For human-readable output:
+
+```bash
+shipxy search-ship COSCO --max 5 --format table
+shipxy search-ship COSCO --max 5 --format pretty
+shipxy search-ship COSCO --max 5 --format ndjson
+```
+
+You can also start the MCP server through the CLI:
+
+```bash
+shipxy mcp start
+shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+```
+
 ## 🧩 Supported APIs
 
 | Tool Name                | Description                                                      |
@@ -119,4 +159,3 @@ MIT © shipxy-api-mcp contributors
 For more information or business inquiries, please contact:
 
 **Phone:** 400-010-8558 / 010-8286 8599
-

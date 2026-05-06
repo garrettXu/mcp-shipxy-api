@@ -7,4 +7,16 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.11.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
 ]
+
+[project.scripts]
+shipxy = "cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["cli", "server", "ship_service", "tool_registry"]

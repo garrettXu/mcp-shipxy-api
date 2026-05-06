@@ -6,7 +6,7 @@ from typing import Optional, Dict, List, Any, Tuple
 import requests
 import time
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 
@@ -26,7 +26,6 @@ class SearchShipResponse(BaseModel):
     total: int
     data: List[SearchShipResult]
 
-    
 class ShipPosition(BaseModel):
     mmsi: int
     imo: int
@@ -78,11 +77,8 @@ class SurRoundingShipResponse(BaseModel):
 class AreaShipData(BaseModel):
     total: int
     scode: int
-    continue_: int = 0  # 'continue'为Python关键字，改为continue_
+    continue_: int = Field(0, alias="continue")  # 'continue'为Python关键字，改为continue_
     ship_list: list[ShipPosition]
-    
-    class Config:
-        fields = {'continue_': 'continue'}
 
 class AreaShipResponse(BaseModel):
     status: int
@@ -651,7 +647,6 @@ class GetWeatherByPointResponse(BaseModel):
 
 class ShipxyAPI:
     """船讯网API封装"""
-    
     def __init__(self, api_key: str, base_url: str = "http://api.shipxy.com/apicall"):
         """
         初始化船讯网API客户端
@@ -743,7 +738,6 @@ class ShipxyAPI:
         if max_results is not None:
             params["max"] = max_results
         
-        print(f'url: {url}, params: {params}')
         # 优先GET请求，若参数过长则自动切换POST
         try:
             response = requests.get(url, params=params, timeout=10)
@@ -1433,5 +1427,3 @@ class ShipxyAPI:
         if resp_json.get("status") != 0:
             raise Exception(f"船讯网返回错误: {resp_json.get('msg', '未知错误')}")
         return GetWeatherByPointResponse(**resp_json)
-
-    
