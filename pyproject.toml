@@ -1,7 +1,7 @@
 [project]
 name = "mcp-shipxy-api"
 version = "0.1.0"
-description = "Shipxy MCP server and CLI for maritime vessel, port, route, weather, and tide APIs."
+description = "面向船舶、港口、航线、气象和潮汐 API 的 Shipxy MCP 服务与 CLI。"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -23,6 +23,8 @@ dependencies = [
     "mcp[cli]>=1.11.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
+    "starlette>=0.47.0",
+    "uvicorn>=0.35.0",
 ]
 
 [project.scripts]
@@ -39,4 +41,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["cli", "server", "ship_service", "tool_registry"]
+py-modules = ["cli", "domain_catalog", "server", "ship_service", "tool_registry", "validation"]

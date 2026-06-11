@@ -2,66 +2,67 @@
 
 <!-- mcp-name: io.github.garrettxu/mcp-shipxy-api -->
 
-**Shipxy MCP Server** is a fully MCP-compliant, open-source Location-Based Service (LBS) solution for maritime scenarios, providing a comprehensive suite of ship and port APIs and tools for developers and AI agents. It enables seamless integration of real-time vessel data, route planning, weather, tides, and more into your applications.
+**Shipxy MCP Server** 是一个完全兼容 MCP 协议的开源海事场景位置服务（LBS）解决方案，为开发者和 AI 智能体提供全面的船舶与港口 API 及工具。它可无缝集成实时船舶数据、航线规划、气象、潮汐等多种能力到您的应用中。
 
-## 🚀 Introduction
+## 🚀 项目简介
 
-**Shipxy MCP Server** empowers your applications, LLMs, and agents with advanced maritime data and geospatial intelligence, including:
+**Shipxy MCP Server** 让您的应用、LLM 和智能体具备先进的海事数据与地理空间智能，包括：
 
-- **Ship Information & Tracking:** Real-time vessel position, static info, fleet, and area queries.
-- **Port & Berth Data:** Global port search, berth/anchor/ETA queries, port call records.
-- **Route Planning:** Point-to-point and port-to-port route planning.
-- **Weather & Tides:** Marine weather, typhoon, and tide station data.
-- **Rich Maritime APIs:** Ship registry, particulars, approach events, and more.
+- **船舶信息与跟踪：** 实时船舶位置、静态信息、船队与区域查询。
+- **港口与泊位数据：** 全球港口检索、靠泊/锚地/ETA 查询、靠港记录。
+- **航线规划：** 点到点、港到港航线规划。
+- **气象与潮汐：** 海洋气象、台风、潮汐站数据。
+- **丰富的海事API：** 船籍、档案、搭靠事件等。
 
-All APIs follow the MCP protocol and can be called from any MCP-compliant client, LLM, or agent platform.
+所有 API 均遵循 MCP 协议，可被任何 MCP 兼容的客户端、LLM 或智能体平台调用。
 
-## 🛠️ Key Features
+## 🛠️ 主要特性
 
-- **Full MCP Protocol Support:** Seamless integration with any MCP-compliant agent, LLM, or platform.
-- **Comprehensive Maritime Data:** Ships, ports, routes, weather, tides, and more.
-- **Real-Time & Historical Data:** Live vessel tracking, voyage history, and event records.
-- **Open Source & Extensible:** MIT licensed, easy to customize and extend.
+- **完整 MCP 协议支持：** 可无缝集成到任何 MCP 兼容的智能体、LLM 或平台。
+- **全面的海事数据：** 船舶、港口、航线、气象、潮汐等。
+- **实时与历史数据：** 实时船舶跟踪、航次历史、事件记录。
+- **开源易扩展：** MIT 协议，便于自定义和扩展。
 
-## ⚡ Quick Start
+## ⚡ 快速开始
 
-### 1. Get Your API Key
+### 1. 获取 API Key
 
-Register and create a server-side API Key at [Shipxy Open Platform](https://api.shipxy.com/v3/console/overview).  
-**Note:** The API key is required for all requests.
+请在 [船讯网开放平台](https://api.shipxy.com/v3/console/overview) 注册并创建服务端 API Key。
+**注意：** 所有请求均需 API Key。
 
-### 2. Installation
+### 2. 安装依赖
 
-Install from PyPI after release:
+正式发布到 PyPI 后可直接安装：
 
 ```bash
 pipx install mcp-shipxy-api
 ```
 
-Or install into an existing virtual environment:
+或安装到已有虚拟环境：
 
 ```bash
 pip install mcp-shipxy-api
 ```
 
-For local source development:
+本地源码开发：
 
 ```bash
 pip install -r requirements.txt
 ```
 
+### 3. 配置
 
-### 3. Configuration
-
-Create a `.env` file in your project root:
+在项目根目录创建 `.env` 文件：
 
 ```
-SHIPXY_API_KEY=your_api_key_here
+SHIPXY_API_KEY=你的_api_key
 ```
 
-### 4. Start the Server
+### 4. 启动服务
 
-Recommended: Use an `mcp.json` configuration file for easy integration with MCP CLI and agent platforms. Example:
+#### stdio 方式
+
+推荐使用 `mcp.json` 配置文件，便于与 MCP CLI 及智能体平台集成。示例：
 
 ```json
 {
@@ -70,16 +71,57 @@ Recommended: Use an `mcp.json` configuration file for easy integration with MCP 
       "command": "python",
       "args": ["/path/to/your/server.py"],
       "env": {
-        "SHIPXY_API_KEY": "your_api_key_here"
+        "SHIPXY_API_KEY": "你的_api_key"
       }
     }
   }
 }
 ```
 
-## CLI Usage
+也可以直接运行：
 
-This project also provides a cross-platform CLI. Business commands stay flat and map directly to MCP tool names, with underscores converted to dashes:
+```bash
+python server.py
+```
+
+#### SSE 方式
+
+需要把服务部署成 HTTP/SSE 时，可以这样启动：
+
+```bash
+python server.py --transport sse --host 0.0.0.0 --port 18081
+```
+
+SSE 端点：
+
+```text
+http://localhost:18081/sse
+```
+
+消息端点：
+
+```text
+http://localhost:18081/messages/
+```
+
+SSE 支持两种 API Key 传入方式：
+
+```bash
+curl 'http://localhost:18081/sse?ak=你的_api_key'
+curl -H 'Authorization: Bearer 你的_api_key' http://localhost:18081/sse
+```
+
+MCP 客户端配置 SSE 时，推荐使用 Bearer Token：
+
+```text
+SSE URL: http://localhost:18081/sse
+Authentication: Bearer Token
+Token: 你的 Shipxy API Key
+```
+
+## CLI 使用
+
+本项目也提供跨平台 CLI，命令保持扁平结构，直接对应 MCP tool 名称，仅把下划线改成短横线：
 
 ```bash
 python -m venv .venv
@@ -93,16 +135,17 @@ shipxy search-ship COSCO --max 5
 shipxy get-single-ship 413211000
 shipxy search-port Shanghai
 shipxy plan-route-by-port CNSHA SGSIN
+shipxy plan-route-by-point 113.571144,22.844316 --end-port-code CNQDG
 shipxy get-weather-by-point --lng 123.58414 --lat 27.37979
 ```
 
-Windows PowerShell activation:
+Windows PowerShell 激活虚拟环境：
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-The CLI defaults to JSON output for LLM and agent calls. For human-readable output:
+CLI 默认输出 JSON，方便大模型和其他 Agent 调用。需要人类可读输出时可指定：
 
 ```bash
 shipxy search-ship COSCO --max 5 --format table
@@ -110,14 +153,14 @@ shipxy search-ship COSCO --max 5 --format pretty
 shipxy search-ship COSCO --max 5 --format ndjson
 ```
 
-You can also start the MCP server through the CLI:
+也可以通过 CLI 启动 MCP Server：
 
 ```bash
 shipxy mcp start
-shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+shipxy mcp start --transport sse --host 0.0.0.0 --port 18081
 ```
 
-Agent and MCP clients should configure the API key through the `SHIPXY_API_KEY` environment variable:
+stdio 方式下，Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 
 ```json
 {
@@ -126,68 +169,92 @@ Agent and MCP clients should configure the API key through the `SHIPXY_API_KEY` 
       "command": "shipxy",
       "args": ["mcp", "start"],
       "env": {
-        "SHIPXY_API_KEY": "your_api_key_here"
+        "SHIPXY_API_KEY": "你的_api_key"
       }
     }
   }
 }
 ```
 
-## 🧩 Supported APIs
+## Agent 调用建议
 
-| Tool Name                | Description                                                      |
-|--------------------------|------------------------------------------------------------------|
-| search_ship              | Fuzzy search for ships by MMSI, IMO, name, or call sign          |
-| get_single_ship          | Query real-time info for a single ship by MMSI                   |
-| get_many_ship            | Query real-time info for multiple ships by MMSI list             |
-| get_fleet_ship           | Query all ships in a fleet                                       |
-| get_surrounding_ship     | Query ships within 10nm of a given ship                          |
-| get_area_ship            | Query ships in a specified area                                  |
-| get_ship_registry        | Query ship registry/country info                                 |
-| search_ship_particular   | Query ship particulars by MMSI/IMO/call sign/name                |
-| search_port              | Fuzzy search for ports by name or code                           |
-| get_berth_ships          | Query ships currently berthed at a port                          |
-| get_anchor_ships         | Query ships at anchor at a port                                  |
-| get_eta_ships            | Query ships with ETA to a port                                   |
-| get_ship_track           | Query historical track points for a ship                         |
-| search_ship_approach     | Query ship-to-ship approach events                               |
-| get_port_of_call_by_ship | Query port call records for a ship                               |
-| get_port_of_call_by_port | Query port call records for a port                               |
-| plan_route_by_point      | Plan route between two coordinates                               |
-| plan_route_by_port       | Plan route between two ports                                     |
-| get_single_eta_precise   | Get ETA and voyage info for a ship                               |
-| get_weather_by_point     | Query marine weather by coordinates                              |
-| get_weather              | Query marine weather by area                                     |
-| get_all_typhoon          | List recent typhoons                                             |
-| get_single_typhoon       | Query details for a specific typhoon                             |
-| get_tides                | List tide stations                                               |
-| get_tide_data            | Query tide data for a station                                    |
+面向大模型和其他 Agent 调用时，建议按这个顺序使用：
 
-## 🌍 Application Scenarios
+1. `describe_capabilities`：查看可用工具、适用场景、返回对象和常见错误。
+2. `describe_object`：查看返回对象字段含义，例如 `VesselPosition`、`Port`、`Route`。
+3. `validate_tool_input`：在正式调用 Shipxy 前预校验参数，获取字段级修复建议。
+4. 调用具体业务工具，例如 `search_ship`、`get_single_ship`、`plan_route_by_port`。
 
-- **Maritime Logistics & Fleet Management**
-- **Vessel Tracking & Monitoring**
-- **Port Operations & ETA Prediction**
-- **Smart Shipping & Route Optimization**
-- **Marine Weather & Safety Applications**
+所有业务工具返回都包含 `ok`、`tool`、`returns`、`capability_ref`、`object_refs`。失败时返回结构化 `error`，包括错误类型、消息、详情和可执行修复建议。
 
-## 📦 Project Structure
+## 🧩 支持的API
+
+| 工具名称                  | 说明                                   |
+|--------------------------|----------------------------------------|
+| describe_capabilities    | 查询工具能力、返回对象、错误和调用建议 |
+| describe_object          | 查询返回对象 schema 和字段含义         |
+| validate_tool_input      | 预校验工具入参并返回修复建议           |
+| search_ship              | 按 MMSI、IMO、船名、呼号模糊查询船舶   |
+| get_single_ship          | 查询单船实时信息（MMSI）               |
+| get_many_ship            | 查询多船实时信息（MMSI列表）           |
+| get_fleet_ship           | 查询船队下所有船舶                     |
+| get_surrounding_ship     | 查询指定船舶10海里内的周边船舶         |
+| get_area_ship            | 查询指定区域内的船舶                   |
+| get_ship_registry        | 查询船舶国籍/船籍信息                  |
+| search_ship_particular   | 按 MMSI/IMO/呼号/船名查船舶档案        |
+| search_port              | 按名称或五位码模糊查询港口             |
+| get_berth_ships          | 查询港口当前靠泊船舶                   |
+| get_anchor_ships         | 查询港口当前锚地船舶                   |
+| get_eta_ships            | 查询未来预计到港船舶                   |
+| get_ship_track           | 查询船舶历史轨迹点                     |
+| search_ship_approach     | 查询船舶搭靠事件                       |
+| get_port_of_call_by_ship | 查询船舶靠港记录                       |
+| get_port_of_call_by_ship_port | 查询船舶在指定港口的靠港记录      |
+| get_port_of_call_by_port | 查询港口靠港记录                       |
+| plan_route_by_point      | 点到点/点到港航线规划                  |
+| plan_route_by_port       | 港到港航线规划                         |
+| get_single_eta_precise   | 查询船舶ETA及航程信息                  |
+| get_weather_by_point     | 按坐标查询海洋气象                     |
+| get_weather              | 按区域查询海洋气象                     |
+| get_all_typhoon          | 查询近年台风列表                       |
+| get_single_typhoon       | 查询指定台风详情                       |
+| get_tides                | 查询潮汐观测站列表                     |
+| get_tide_data            | 查询指定潮汐站潮汐数据                 |
+| get_global_tides         | 查询全球潮汐观测站列表                 |
+| get_global_tide_data     | 查询指定全球潮汐站潮汐数据             |
+| current_weather          | 查询全球实时大气与海洋气象             |
+| future_weather           | 查询全球未来大气与海洋气象预报         |
+| history_weather          | 查询指定坐标和时间范围的历史气象       |
+| get_nav_warning          | 查询中国海事局航行警告                 |
+
+## 🌍 应用场景
+
+- **航运物流与船队管理**
+- **船舶跟踪与监控**
+- **港口运营与ETA预测**
+- **智能航运与航线优化**
+- **海洋气象与安全应用**
+
+## 📦 项目结构
 
 ```
 .
-├── server.py           # MCP server entry point
-├── ship_service.py     # Shipxy API integration and business logic
-├── requirements.txt    # Python dependencies
-├── pyproject.toml      # Project metadata
-└── README.md           # This file
+├── server.py           # MCP服务入口
+├── ship_service.py     # 船讯网API集成与业务逻辑
+├── tool_registry.py    # CLI/MCP工具注册表
+├── domain_catalog.py   # 能力目录、返回对象schema、字段解释
+├── validation.py       # 入参预校验与修复建议
+├── requirements.txt    # Python依赖
+├── pyproject.toml      # 项目元数据
+└── README.md           # 本文件
 ```
 
-## 📄 License
+## 📄 许可证
 
-MIT © shipxy-api-mcp contributors
+MIT © shipxy-api-mcp 贡献者
 
-## 📞 Contact
+## 📞 联系方式
 
-For more information or business inquiries, please contact:
+如需了解更多或商务合作，请联系：
 
-**Phone:** 400-010-8558 / 010-8286 8599
+**电话：** 400-010-8558 / 010-8286 8599

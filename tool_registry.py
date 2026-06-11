@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from domain_catalog import error_fix, tool_response_metadata
 from ship_service import ShipxyAPI
 
 
@@ -32,11 +33,15 @@ class ToolSpec:
         return self.name.replace("_", "-")
 
     def schema(self) -> dict[str, Any]:
+        response_metadata = tool_response_metadata(self.name)
         return {
             "name": self.name,
             "cli_name": self.cli_name,
             "method": self.method,
             "summary": self.summary,
+            "returns": response_metadata["returns"],
+            "capability_ref": response_metadata["capability_ref"],
+            "object_refs": response_metadata["object_refs"],
             "parameters": [
                 {
                     "name": param.name,
@@ -79,205 +84,255 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
         "search_ship",
         "search_ship",
-        "Fuzzy search ships by MMSI, IMO, name, or call sign.",
+        "按 MMSI、IMO、船名或呼号模糊查询船舶。",
         (
-            p("keywords", "str", "Ship keyword.", required=True, positional=True),
-            p("max_results", "int", "Maximum result count.", default=None, cli_name="max", aliases=("--max-results",)),
+            p("keywords", "str", "船舶查询关键字。", required=True, positional=True),
+            p("max_results", "int", "最大返回数量。", default=None, cli_name="max", aliases=("--max-results",)),
         ),
     ),
-    ToolSpec("get_single_ship", "get_single_ship", "Get realtime information for one ship.", (p("mmsi", "int", "Ship MMSI.", required=True, positional=True),)),
-    ToolSpec("get_many_ship", "get_many_ship", "Get realtime information for multiple ships.", (p("mmsis", "list[int]", "Comma-separated MMSI list.", required=True, positional=True),)),
-    ToolSpec("get_fleet_ship", "get_fleet_ship", "Get all ships in a fleet.", (p("fleet_id", "str", "Fleet ID.", required=True, positional=True),)),
-    ToolSpec("get_surrounding_ship", "get_surrounding_ship", "Get ships within 10 nautical miles of a ship.", (p("mmsi", "int", "Ship MMSI.", required=True, positional=True),)),
+    ToolSpec("get_single_ship", "get_single_ship", "查询单船实时位置和基础信息。", (p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),)),
+    ToolSpec("get_many_ship", "get_many_ship", "查询多艘船舶的实时位置和基础信息。", (p("mmsis", "list[int]", "逗号分隔的 MMSI 列表。", required=True, positional=True),)),
+    ToolSpec("get_fleet_ship", "get_fleet_ship", "查询一个船队下的全部船舶。", (p("fleet_id", "str", "船队 ID。", required=True, positional=True),)),
+    ToolSpec("get_surrounding_ship", "get_surrounding_ship", "查询指定船舶 10 海里范围内的周边船舶。", (p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),)),
     ToolSpec(
         "get_area_ship",
         "get_area_ship",
-        "Get ships in a polygon area.",
+        "查询多边形区域内的船舶。",
         (
-            p("region", "str", "Region string, such as lng,lat-lng,lat.", required=True, positional=True),
-            p("output", "int", "Output format: 1 JSON, 0 base64.", default=1),
-            p("scode", "int", "Session token.", default=None),
+            p("region", "str", "区域字符串，格式如 lng,lat-lng,lat。", required=True, positional=True),
+            p("output", "int", "输出格式：1 表示 JSON，0 表示 base64。", default=1),
+            p("scode", "int", "分页或会话令牌。", default=None),
         ),
     ),
-    ToolSpec("get_ship_registry", "get_ship_registry", "Get ship registry/country information.", (p("mmsi", "int", "Ship MMSI.", required=True, positional=True),)),
+    ToolSpec("get_ship_registry", "get_ship_registry", "查询船舶船籍或国家地区信息。", (p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),)),
     ToolSpec(
         "search_ship_particular",
         "search_ship_particular",
-        "Search ship particulars by MMSI, IMO, call sign, or ship name.",
+        "按 MMSI、IMO、呼号或船名查询船舶档案。",
         (
-            p("mmsi", "int", "Ship MMSI.", default=None),
-            p("imo", "int", "Ship IMO.", default=None),
-            p("call_sign", "str", "Ship call sign.", default=None),
-            p("ship_name", "str", "Ship English name.", default=None),
+            p("mmsi", "int", "船舶 MMSI。", default=None),
+            p("imo", "int", "船舶 IMO。", default=None),
+            p("call_sign", "str", "船舶呼号。", default=None),
+            p("ship_name", "str", "船舶英文名。", default=None),
         ),
     ),
     ToolSpec(
         "search_port",
         "search_port",
-        "Fuzzy search ports by name or port code.",
+        "按港口名称或港口代码模糊查询港口。",
         (
-            p("keywords", "str", "Port keyword.", required=True, positional=True),
-            p("max_results", "int", "Maximum result count.", default=None, cli_name="max", aliases=("--max-results",)),
+            p("keywords", "str", "港口查询关键字。", required=True, positional=True),
+            p("max_results", "int", "最大返回数量。", default=None, cli_name="max", aliases=("--max-results",)),
         ),
     ),
     ToolSpec(
         "get_berth_ships",
         "get_berth_ships",
-        "Get ships currently berthed at a port.",
+        "查询港口当前靠泊船舶。",
         (
-            p("port_code", "str", "Port code.", required=True, positional=True),
-            p("ship_type", "int", "Ship type.", default=None),
+            p("port_code", "str", "港口五位码。", required=True, positional=True),
+            p("ship_type", "int", "船舶类型。", default=None),
         ),
     ),
     ToolSpec(
         "get_anchor_ships",
         "get_anchor_ships",
-        "Get ships currently anchored at a port.",
+        "查询港口当前锚地船舶。",
         (
-            p("port_code", "str", "Port code.", required=True, positional=True),
-            p("ship_type", "int", "Ship type.", default=None),
+            p("port_code", "str", "港口五位码。", required=True, positional=True),
+            p("ship_type", "int", "船舶类型。", default=None),
         ),
     ),
     ToolSpec(
         "get_eta_ships",
         "get_eta_ships",
-        "Get ships expected to arrive at a port.",
+        "查询预计到达港口的船舶。",
         (
-            p("port_code", "str", "Port code.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("ship_type", "int", "Ship type.", default=None),
+            p("port_code", "str", "港口五位码。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("ship_type", "int", "船舶类型。", default=None),
         ),
     ),
     ToolSpec(
         "get_ship_track",
         "get_ship_track",
-        "Get historical track points for a ship.",
+        "查询船舶历史轨迹点。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("output", "int", "Output format: 1 JSON, 0 base64.", default=1),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("output", "int", "输出格式：1 表示 JSON，0 表示 base64。", default=1),
         ),
     ),
     ToolSpec(
         "search_ship_approach",
         "search_ship_approach",
-        "Search ship-to-ship approach events.",
+        "查询船舶搭靠或接近事件。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("approach_zone", "int", "Approach zone.", default=None),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("approach_zone", "int", "搭靠区域代码。", default=None),
         ),
     ),
     ToolSpec(
         "get_port_of_call_by_ship",
         "get_port_of_call_by_ship",
-        "Get port call records for a ship.",
+        "查询一艘船的历史靠港记录。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("imo", "int", "Ship IMO.", default=None),
-            p("ship_name", "str", "Ship English name.", default=None),
-            p("call_sign", "str", "Ship call sign.", default=None),
-            p("time_zone", "int", "Timezone mode.", default=2),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("imo", "int", "船舶 IMO。", default=None),
+            p("ship_name", "str", "船舶英文名。", default=None),
+            p("call_sign", "str", "船舶呼号。", default=None),
+            p("time_zone", "int", "时区模式。", default=2),
         ),
     ),
     ToolSpec(
         "get_port_of_call_by_ship_port",
         "get_port_of_call_by_ship_port",
-        "Get port call records for a ship at one port.",
+        "查询一艘船在指定港口的靠港记录。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("port_code", "str", "Port code.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("imo", "int", "Ship IMO.", default=None),
-            p("ship_name", "str", "Ship English name.", default=None),
-            p("call_sign", "str", "Ship call sign.", default=None),
-            p("time_zone", "int", "Timezone mode.", default=2),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("port_code", "str", "港口五位码。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("imo", "int", "船舶 IMO。", default=None),
+            p("ship_name", "str", "船舶英文名。", default=None),
+            p("call_sign", "str", "船舶呼号。", default=None),
+            p("time_zone", "int", "时区模式。", default=2),
         ),
     ),
     ToolSpec(
         "get_ship_status",
         "get_ship_status",
-        "Get current ship port-call status.",
+        "查询船舶当前挂靠状态。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("imo", "int", "Ship IMO.", default=None),
-            p("ship_name", "str", "Ship English name.", default=None),
-            p("call_sign", "str", "Ship call sign.", default=None),
-            p("time_zone", "int", "Timezone mode.", default=2),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("imo", "int", "船舶 IMO。", default=None),
+            p("ship_name", "str", "船舶英文名。", default=None),
+            p("call_sign", "str", "船舶呼号。", default=None),
+            p("time_zone", "int", "时区模式。", default=2),
         ),
     ),
     ToolSpec(
         "get_port_of_call_by_port",
         "get_port_of_call_by_port",
-        "Get port call records for a port.",
+        "查询指定港口的历史靠港船舶记录。",
         (
-            p("port_code", "str", "Port code.", required=True, positional=True),
-            p("start_time", "int", "Start UTC timestamp.", required=True, positional=True),
-            p("end_time", "int", "End UTC timestamp.", required=True, positional=True),
-            p("type_", "int", "Query type: 1 ATA, 2 ATD.", default=1, cli_name="type"),
-            p("time_zone", "int", "Timezone mode.", default=2),
+            p("port_code", "str", "港口五位码。", required=True, positional=True),
+            p("start_time", "int", "开始 UTC 时间戳。", required=True, positional=True),
+            p("end_time", "int", "结束 UTC 时间戳。", required=True, positional=True),
+            p("type_", "int", "查询类型：1 表示 ATA，2 表示 ATD。", default=1, cli_name="type"),
+            p("time_zone", "int", "时区模式。", default=2),
         ),
     ),
     ToolSpec(
         "plan_route_by_point",
         "plan_route_by_point",
-        "Plan a route between two coordinates.",
+        "规划从一个坐标到另一个坐标或目的港的航线。",
         (
-            p("start_point", "str", "Start point lng,lat.", required=True, positional=True),
-            p("end_point", "str", "End point lng,lat.", required=True, positional=True),
-            p("avoid", "str", "Avoid nodes.", default=None),
-            p("through", "str", "Through nodes.", default=None),
+            p("start_point", "str", "起点坐标，格式 lng,lat。", required=True, positional=True),
+            p("end_point", "str", "终点坐标，格式 lng,lat；未提供 end_port_code 时必填。", default=None),
+            p("end_port_code", "str", "目的港五位码；未提供 end_point 时必填。", default=None),
+            p("avoid", "str", "避让节点。", default=None),
+            p("through", "str", "途经节点。", default=None),
         ),
     ),
     ToolSpec(
         "plan_route_by_port",
         "plan_route_by_port",
-        "Plan a route between two ports.",
+        "规划两个港口之间的航线。",
         (
-            p("start_port_code", "str", "Start port code.", required=True, positional=True),
-            p("end_port_code", "str", "End port code.", required=True, positional=True),
-            p("avoid", "str", "Avoid nodes.", default=None),
-            p("through", "str", "Through nodes.", default=None),
+            p("start_port_code", "str", "起始港五位码。", required=True, positional=True),
+            p("end_port_code", "str", "目的港五位码。", required=True, positional=True),
+            p("avoid", "str", "避让节点。", default=None),
+            p("through", "str", "途经节点。", default=None),
         ),
     ),
     ToolSpec(
         "get_single_eta_precise",
         "get_single_eta_precise",
-        "Get precise ETA and voyage information for one ship.",
+        "查询单船精准 ETA 和航程信息。",
         (
-            p("mmsi", "int", "Ship MMSI.", required=True, positional=True),
-            p("port_code", "str", "Port code.", default=None),
-            p("speed", "float", "Specified speed.", default=None),
+            p("mmsi", "int", "船舶 MMSI。", required=True, positional=True),
+            p("port_code", "str", "目的港五位码。", default=None),
+            p("speed", "float", "指定航速。", default=None),
         ),
     ),
-    ToolSpec("get_weather", "get_weather", "Get marine weather by area type.", (p("weather_type", "int", "Area type: 0 all, 1 coast, 2 offshore, 3 ocean.", required=True, positional=True),)),
+    ToolSpec("get_weather", "get_weather", "按海区类型查询海洋气象。", (p("weather_type", "int", "海区类型：0 全部，1 沿岸，2 近海，3 远海。", required=True, positional=True),)),
     ToolSpec(
         "get_weather_by_point",
         "get_weather_by_point",
-        "Get marine weather by coordinate.",
+        "按坐标查询海洋气象。",
         (
-            p("lng", "float", "Longitude.", required=True),
-            p("lat", "float", "Latitude.", required=True),
-            p("weather_time", "int", "Weather UTC timestamp.", default=None),
+            p("lng", "float", "经度。", required=True),
+            p("lat", "float", "纬度。", required=True),
+            p("weather_time", "int", "气象 UTC 时间戳。", default=None),
         ),
     ),
-    ToolSpec("get_all_typhoon", "get_all_typhoon", "List recent typhoons."),
-    ToolSpec("get_single_typhoon", "get_single_typhoon", "Get one typhoon by ID.", (p("typhoon_id", "int", "Typhoon ID.", required=True, positional=True),)),
-    ToolSpec("get_tides", "get_tides", "List tide stations."),
+    ToolSpec("get_all_typhoon", "get_all_typhoon", "查询近年全球台风列表。"),
+    ToolSpec("get_single_typhoon", "get_single_typhoon", "按台风 ID 查询单个台风详情。", (p("typhoon_id", "int", "台风 ID。", required=True, positional=True),)),
+    ToolSpec("get_tides", "get_tides", "查询国内潮汐观测站列表。"),
     ToolSpec(
         "get_tide_data",
         "get_tide_data",
-        "Get tide data for one tide station.",
+        "查询一个国内潮汐观测站的潮汐数据。",
         (
-            p("port_code", "int", "Tide station ID.", required=True, positional=True),
-            p("start_date", "str", "Start date yyyy-MM-dd.", required=True, positional=True),
-            p("end_date", "str", "End date yyyy-MM-dd.", required=True, positional=True),
+            p("port_code", "int", "潮汐观测站 ID。", required=True, positional=True),
+            p("start_date", "str", "开始日期 yyyy-MM-dd。", required=True, positional=True),
+            p("end_date", "str", "结束日期 yyyy-MM-dd。", required=True, positional=True),
+        ),
+    ),
+    ToolSpec("get_global_tides", "get_global_tides", "查询全球潮汐观测站列表。"),
+    ToolSpec(
+        "get_global_tide_data",
+        "get_global_tide_data",
+        "查询一个全球潮汐观测站的潮汐数据。",
+        (
+            p("port_code", "int", "get_global_tides 返回的全球潮汐观测站 ID，不是港口五位码。", required=True, positional=True),
+            p("start_date", "str", "开始日期 yyyy-MM-dd。", required=True, positional=True),
+            p("end_date", "str", "结束日期 yyyy-MM-dd。", required=True, positional=True),
+        ),
+    ),
+    ToolSpec(
+        "current_weather",
+        "current_weather",
+        "按坐标查询全球实时大气和海洋气象。",
+        (
+            p("lng", "float", "WGS84 十进制度经度。", required=True),
+            p("lat", "float", "WGS84 十进制度纬度。", required=True),
+        ),
+    ),
+    ToolSpec(
+        "future_weather",
+        "future_weather",
+        "按坐标查询全球未来大气和海洋气象预报。",
+        (
+            p("lng", "float", "WGS84 十进制度经度。", required=True),
+            p("lat", "float", "WGS84 十进制度纬度。", required=True),
+        ),
+    ),
+    ToolSpec(
+        "history_weather",
+        "history_weather",
+        "按坐标和日期查询全球历史气象。",
+        (
+            p("lng", "float", "WGS84 十进制度经度。", required=True),
+            p("lat", "float", "WGS84 十进制度纬度。", required=True),
+            p("start_time", "str", "历史气象开始时间 yyyy-MM-dd HH:mm:ss。", required=True),
+            p("end_time", "str", "历史气象结束时间 yyyy-MM-dd HH:mm:ss。", required=True),
+        ),
+    ),
+    ToolSpec(
+        "get_nav_warning",
+        "get_nav_warning",
+        "按时间范围查询中国海事局航行警告。",
+        (
+            p("start_time", "str", "开始时间 yyyy-MM-dd HH:mm。", required=True),
+            p("end_time", "str", "结束时间 yyyy-MM-dd HH:mm。", required=True),
         ),
     ),
 )
@@ -294,7 +349,7 @@ def get_tool(name: str) -> ToolSpec:
     normalized = normalize_tool_name(name)
     if normalized in TOOLS_BY_NAME:
         return TOOLS_BY_NAME[normalized]
-    raise KeyError(f"Unknown tool: {name}")
+    raise KeyError(f"未知工具：{name}")
 
 
 def parse_value(value: Any, type_name: str) -> Any:
@@ -311,15 +366,70 @@ def parse_value(value: Any, type_name: str) -> Any:
     return value
 
 
+def _invalid_request_result(tool_name: str, errors: list[dict[str, Any]]) -> dict[str, Any]:
+    metadata = tool_response_metadata(tool_name)
+    return {
+        "ok": False,
+        "tool": tool_name,
+        "capability_ref": metadata["capability_ref"],
+        "returns": metadata["returns"],
+        "object_refs": metadata["object_refs"],
+        "error": {
+            "type": "invalid_request",
+            "message": "Shipxy 工具入参不合法。",
+            "details": errors,
+            "fix": error_fix("invalid_request"),
+        },
+    }
+
+
+def _with_response_metadata(tool_name: str, result: Any) -> Any:
+    data = model_to_data(result)
+    if not isinstance(data, dict):
+        return data
+
+    metadata = tool_response_metadata(tool_name)
+    data.setdefault("tool", tool_name)
+    data.setdefault("capability_ref", metadata["capability_ref"])
+    data.setdefault("returns", metadata["returns"])
+    data.setdefault("object_refs", metadata["object_refs"])
+
+    if data.get("ok") is False and isinstance(data.get("error"), dict):
+        error = data["error"]
+        error.setdefault("fix", error_fix(error.get("type")))
+    return data
+
+
 def invoke_tool(api: ShipxyAPI, tool_name: str, values: dict[str, Any]) -> Any:
     tool = get_tool(tool_name)
+    from validation import validate_tool_input
+
+    validation = validate_tool_input(tool.name, values)
+    if not validation["ok"]:
+        return _invalid_request_result(tool.name, validation["errors"])
+
     kwargs: dict[str, Any] = {}
     for param in tool.params:
         value = values.get(param.name, param.default)
         if value is not None:
-            kwargs[param.name] = parse_value(value, param.type)
+            try:
+                kwargs[param.name] = parse_value(value, param.type)
+            except (TypeError, ValueError) as exc:
+                return _invalid_request_result(
+                    tool.name,
+                    [
+                        {
+                            "type": "invalid_request",
+                            "field": param.name,
+                            "message": f"无法将参数解析为 {param.type}: {exc}",
+                            "received": value,
+                            "expected": param.type,
+                            "fix": {"strategy": "请按工具文档要求的参数类型传值。"},
+                        }
+                    ],
+                )
     method: Callable[..., Any] = getattr(api, tool.method)
-    return method(**kwargs)
+    return _with_response_metadata(tool.name, method(**kwargs))
 
 
 def model_to_data(value: Any) -> Any:

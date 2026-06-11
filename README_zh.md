@@ -60,6 +60,8 @@ SHIPXY_API_KEY=你的_api_key
 
 ### 4. 启动服务
 
+#### stdio 方式
+
 推荐使用 `mcp.json` 配置文件，便于与 MCP CLI 及智能体平台集成。示例：
 
 ```json
@@ -74,6 +76,47 @@ SHIPXY_API_KEY=你的_api_key
     }
   }
 }
+```
+
+也可以直接运行：
+
+```bash
+python server.py
+```
+
+#### SSE 方式
+
+需要把服务部署成 HTTP/SSE 时，可以这样启动：
+
+```bash
+python server.py --transport sse --host 0.0.0.0 --port 18081
+```
+
+SSE 端点：
+
+```text
+http://localhost:18081/sse
+```
+
+消息端点：
+
+```text
+http://localhost:18081/messages/
+```
+
+SSE 支持两种 API Key 传入方式：
+
+```bash
+curl 'http://localhost:18081/sse?ak=你的_api_key'
+curl -H 'Authorization: Bearer 你的_api_key' http://localhost:18081/sse
+```
+
+MCP 客户端配置 SSE 时，推荐使用 Bearer Token：
+
+```text
+SSE URL: http://localhost:18081/sse
+Authentication: Bearer Token
+Token: 你的 Shipxy API Key
 ```
 
 ## CLI 使用
@@ -92,6 +135,7 @@ shipxy search-ship COSCO --max 5
 shipxy get-single-ship 413211000
 shipxy search-port Shanghai
 shipxy plan-route-by-port CNSHA SGSIN
+shipxy plan-route-by-point 113.571144,22.844316 --end-port-code CNQDG
 shipxy get-weather-by-point --lng 123.58414 --lat 27.37979
 ```
 
@@ -113,10 +157,10 @@ shipxy search-ship COSCO --max 5 --format ndjson
 
 ```bash
 shipxy mcp start
-shipxy mcp start --transport sse --host 127.0.0.1 --port 8000
+shipxy mcp start --transport sse --host 0.0.0.0 --port 18081
 ```
 
-Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
+stdio 方式下，Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 
 ```json
 {
@@ -132,10 +176,24 @@ Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 }
 ```
 
+## Agent 调用建议
+
+面向大模型和其他 Agent 调用时，建议按这个顺序使用：
+
+1. `describe_capabilities`：查看可用工具、适用场景、返回对象和常见错误。
+2. `describe_object`：查看返回对象字段含义，例如 `VesselPosition`、`Port`、`Route`。
+3. `validate_tool_input`：在正式调用 Shipxy 前预校验参数，获取字段级修复建议。
+4. 调用具体业务工具，例如 `search_ship`、`get_single_ship`、`plan_route_by_port`。
+
+所有业务工具返回都包含 `ok`、`tool`、`returns`、`capability_ref`、`object_refs`。失败时返回结构化 `error`，包括错误类型、消息、详情和可执行修复建议。
+
 ## 🧩 支持的API
 
 | 工具名称                  | 说明                                   |
 |--------------------------|----------------------------------------|
+| describe_capabilities    | 查询工具能力、返回对象、错误和调用建议 |
+| describe_object          | 查询返回对象 schema 和字段含义         |
+| validate_tool_input      | 预校验工具入参并返回修复建议           |
 | search_ship              | 按 MMSI、IMO、船名、呼号模糊查询船舶   |
 | get_single_ship          | 查询单船实时信息（MMSI）               |
 | get_many_ship            | 查询多船实时信息（MMSI列表）           |
@@ -151,8 +209,9 @@ Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 | get_ship_track           | 查询船舶历史轨迹点                     |
 | search_ship_approach     | 查询船舶搭靠事件                       |
 | get_port_of_call_by_ship | 查询船舶靠港记录                       |
+| get_port_of_call_by_ship_port | 查询船舶在指定港口的靠港记录      |
 | get_port_of_call_by_port | 查询港口靠港记录                       |
-| plan_route_by_point      | 点到点航线规划                         |
+| plan_route_by_point      | 点到点/点到港航线规划                  |
 | plan_route_by_port       | 港到港航线规划                         |
 | get_single_eta_precise   | 查询船舶ETA及航程信息                  |
 | get_weather_by_point     | 按坐标查询海洋气象                     |
@@ -161,6 +220,12 @@ Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 | get_single_typhoon       | 查询指定台风详情                       |
 | get_tides                | 查询潮汐观测站列表                     |
 | get_tide_data            | 查询指定潮汐站潮汐数据                 |
+| get_global_tides         | 查询全球潮汐观测站列表                 |
+| get_global_tide_data     | 查询指定全球潮汐站潮汐数据             |
+| current_weather          | 查询全球实时大气与海洋气象             |
+| future_weather           | 查询全球未来大气与海洋气象预报         |
+| history_weather          | 查询指定坐标和时间范围的历史气象       |
+| get_nav_warning          | 查询中国海事局航行警告                 |
 
 ## 🌍 应用场景
 
@@ -176,6 +241,9 @@ Agent 和 MCP 客户端应通过 `SHIPXY_API_KEY` 环境变量传入 API Key：
 .
 ├── server.py           # MCP服务入口
 ├── ship_service.py     # 船讯网API集成与业务逻辑
+├── tool_registry.py    # CLI/MCP工具注册表
+├── domain_catalog.py   # 能力目录、返回对象schema、字段解释
+├── validation.py       # 入参预校验与修复建议
 ├── requirements.txt    # Python依赖
 ├── pyproject.toml      # 项目元数据
 └── README_zh.md        # 本文件

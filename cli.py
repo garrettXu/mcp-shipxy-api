@@ -40,7 +40,7 @@ def get_api_key(args: argparse.Namespace | None = None) -> str:
     api_key = getattr(args, "api_key", None) if args else None
     api_key = api_key or os.getenv("SHIPXY_API_KEY")
     if not api_key:
-        raise MissingAPIKeyError("Missing SHIPXY_API_KEY. Set it in .env, environment variables, or pass --api-key.")
+        raise MissingAPIKeyError("缺少 SHIPXY_API_KEY。请在 .env、环境变量中设置，或通过 --api-key 传入。")
     return api_key
 
 
@@ -129,8 +129,15 @@ def collect_values(args: argparse.Namespace, tool_name: str) -> dict[str, Any]:
 def run_tool(args: argparse.Namespace) -> int:
     api = create_api(args)
     result = invoke_tool(api, args.tool_name, collect_values(args, args.tool_name))
-    payload = {"ok": True, "tool": args.tool_name, "data": model_to_data(result)}
+    data = model_to_data(result)
+    if isinstance(data, dict) and "ok" in data:
+        payload = {"tool": args.tool_name, **data}
+    else:
+        payload = {"ok": True, "tool": args.tool_name, "data": data}
     render_result(payload, args.format)
+    if payload.get("ok") is False:
+        error_type = payload.get("error", {}).get("type")
+        return EXIT_USAGE if error_type == "invalid_request" else EXIT_API_ERROR
     return 0
 
 
@@ -186,10 +193,13 @@ def installed_version(package: str) -> str | None:
 def command_doctor(args: argparse.Namespace) -> int:
     load_dotenv()
     deps = {
+        "httpx": installed_version("httpx"),
         "requests": installed_version("requests"),
         "python-dotenv": installed_version("python-dotenv"),
         "mcp": installed_version("mcp"),
         "pydantic": installed_version("pydantic"),
+        "starlette": installed_version("starlette"),
+        "uvicorn": installed_version("uvicorn"),
     }
     missing = [name for name, version in deps.items() if version is None]
     payload = {
@@ -207,6 +217,10 @@ def command_doctor(args: argparse.Namespace) -> int:
 def command_mcp_start(args: argparse.Namespace) -> int:
     import server
 
+    if args.transport == "sse":
+        server.run_sse_server(args.host, args.port, debug=args.debug)
+        return 0
+
     server.mcp.settings.host = args.host
     server.mcp.settings.port = args.port
     server.mcp.run(transport=args.transport, mount_path=args.mount_path)
@@ -214,12 +228,12 @@ def command_mcp_start(args: argparse.Namespace) -> int:
 
 
 def add_global_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--api-key", help="Shipxy API key. Overrides SHIPXY_API_KEY.")
+    parser.add_argument("--api-key", help="Shipxy API Key。会覆盖 SHIPXY_API_KEY。")
     parser.add_argument(
         "--format",
         choices=("json", "pretty", "table", "ndjson"),
         default="json",
-        help="Output format. Defaults to json for agent-friendly calls.",
+        help="输出格式。默认 json，便于 Agent 调用。",
     )
 
 
@@ -250,36 +264,37 @@ def add_tool_parser(subparsers: argparse._SubParsersAction, tool) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="shipxy", description="Shipxy API command line interface.")
+    parser = argparse.ArgumentParser(prog="shipxy", description="Shipxy API 命令行工具。")
     parser.add_argument("--version", action="version", version="shipxy 0.1.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    tools_parser = subparsers.add_parser("tools", help="List available tools.")
+    tools_parser = subparsers.add_parser("tools", help="列出可用工具。")
     add_global_options(tools_parser)
     tools_parser.set_defaults(func=command_tools)
 
-    schema_parser = subparsers.add_parser("schema", help="Show tool schemas.")
+    schema_parser = subparsers.add_parser("schema", help="查看工具 schema。")
     add_global_options(schema_parser)
-    schema_parser.add_argument("name", nargs="?", help="Tool name, such as search-ship.")
+    schema_parser.add_argument("name", nargs="?", help="工具名，例如 search-ship。")
     schema_parser.set_defaults(func=command_schema)
 
-    auth_parser = subparsers.add_parser("auth", help="Authentication helpers.")
+    auth_parser = subparsers.add_parser("auth", help="认证相关辅助命令。")
     auth_subparsers = auth_parser.add_subparsers(dest="auth_command", required=True)
-    auth_status_parser = auth_subparsers.add_parser("status", help="Show API key status.")
+    auth_status_parser = auth_subparsers.add_parser("status", help="查看 API Key 状态。")
     add_global_options(auth_status_parser)
     auth_status_parser.set_defaults(func=command_auth_status)
 
-    doctor_parser = subparsers.add_parser("doctor", help="Check local CLI configuration.")
+    doctor_parser = subparsers.add_parser("doctor", help="检查本地 CLI 配置。")
     add_global_options(doctor_parser)
     doctor_parser.set_defaults(func=command_doctor)
 
-    mcp_parser = subparsers.add_parser("mcp", help="MCP server helpers.")
+    mcp_parser = subparsers.add_parser("mcp", help="MCP 服务相关辅助命令。")
     mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_command", required=True)
-    mcp_start_parser = mcp_subparsers.add_parser("start", help="Start the MCP server.")
+    mcp_start_parser = mcp_subparsers.add_parser("start", help="启动 MCP 服务。")
     mcp_start_parser.add_argument("--transport", choices=("stdio", "sse", "streamable-http"), default="stdio")
     mcp_start_parser.add_argument("--host", default="127.0.0.1")
     mcp_start_parser.add_argument("--port", type=int, default=8000)
     mcp_start_parser.add_argument("--mount-path", default=None)
+    mcp_start_parser.add_argument("--debug", action="store_true")
     mcp_start_parser.set_defaults(func=command_mcp_start)
 
     for tool in TOOLS:
