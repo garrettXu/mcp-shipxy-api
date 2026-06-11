@@ -60,6 +60,60 @@ SHIPXY_API_KEY=你的_api_key
 
 ### 4. 启动服务
 
+#### 直接使用船讯网托管 SSE 服务
+
+如果你不想在本地运行源码，可以直接连接船讯网提供的 MCP SSE 服务：
+
+```text
+https://mcp.shipxy.com/sse
+```
+
+Cursor、Cherry Studio 或其他支持 SSE 的 MCP 客户端可按下面填写：
+
+```text
+名称：shipxy
+描述：Shipxy MCP 海事数据服务
+URL：https://mcp.shipxy.com/sse
+传输协议：Server-Sent Events (SSE)
+认证方式：Bearer Token
+Bearer Token：你的 Shipxy API Key
+超时时间：30000
+```
+
+Cursor JSON 配置示例：
+
+```json
+{
+  "mcpServers": {
+    "shipxy": {
+      "url": "https://mcp.shipxy.com/sse",
+      "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer 你的 Shipxy API Key"
+      }
+    }
+  }
+}
+```
+
+如果你的客户端使用 `type` 字段表示传输协议，也可以写成：
+
+```json
+{
+  "mcpServers": {
+    "shipxy": {
+      "type": "sse",
+      "url": "https://mcp.shipxy.com/sse",
+      "headers": {
+        "Authorization": "Bearer 你的 Shipxy API Key"
+      }
+    }
+  }
+}
+```
+
+注意：URL 必须包含 `/sse`；Bearer Token 填你自己的船讯网 API Key，不需要配置本地 `command`、`args` 或 `.venv`。
+
 #### stdio 方式
 
 推荐使用 `mcp.json` 配置文件，便于与 MCP CLI 及智能体平台集成。示例：
